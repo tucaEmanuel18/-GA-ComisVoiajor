@@ -1,0 +1,25 @@
+﻿  ComisVoiajor.cpp
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(18,29): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(19,28): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(70,41): warning C4018: '<': signed/unsigned mismatch
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(84,24): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(194,23): warning C4018: '<': signed/unsigned mismatch
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(361,37): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.27.29110\include\utility(192,16): warning C4244: 'initializing': conversion from 'double' to '_Ty1', possible loss of data
+          with
+          [
+              _Ty1=float
+          ]
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(198): message : see reference to function template instantiation 'std::pair<float,int>::pair<double&,int&,0>(_Other1,_Other2) noexcept' being compiled
+          with
+          [
+              _Other1=double &,
+              _Other2=int &
+          ]
+C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\ComisVoiajor\ComisVoiajor.cpp(198): message : see reference to function template instantiation 'std::pair<float,int>::pair<double&,int&,0>(_Other1,_Other2) noexcept' being compiled
+          with
+          [
+              _Other1=double &,
+              _Other2=int &
+          ]
+  ComisVoiajor.vcxproj -> C:\Facultate_an_2\Algoritmi Genetici\Tema3\Cod\ComisVoiajor\Debug\ComisVoiajor.exe
