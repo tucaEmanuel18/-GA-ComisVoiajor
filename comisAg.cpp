@@ -1,6 +1,4 @@
 // ComisVoiajor.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
 #include <iomanip>
 #include <string.h>
@@ -11,14 +9,18 @@
 #include <chrono>
 #include <fstream>
 #include <algorithm>
+#include <ratio>
 using namespace std;
-ifstream fin("date.in.txt");
-#define INFINIT 999999999
 
-const float mutateProb = 0.02;
-const float crossProb = 0.5;
-const int popSize = 100;
-const int nrVertex = 443;
+#define INFINIT 999999999
+ofstream outfile("br17.out");
+const float defaultMutateProb = 0.01;
+float mutateProb = defaultMutateProb;
+float oldBestEval;
+int blockCounter = 0;
+const float crossProb = 0.7;
+const int popSize = 250;
+const int nrVertex = 17;
 vector<vector<int>> pop;
 vector<float> popEval;
 list<int> unitPerm;
@@ -86,21 +88,34 @@ float evalCrom(const vector<int>& crom)
 
     return sum;
 }
-float evalFitnessCrom(const vector<int>& crom)
+float evalFitnessCrom(float cost, float min, float max)
 {
-    float result = evalCrom(crom);
-    if (result == 0)
-    {
-        result += 0.001;
-    }
-    return pow(1 / result, 3);
+    float result = (max - cost) / (max - min) + 0.01;
+    return pow(result, 3);
 }
 void eval()
 {
     popEval.clear();
-    for (auto ii : pop)
+    vector<float> popCost;
+    float min, max;
+    min = INFINIT;
+    max = -1 * INFINIT;
+    for(auto ii : pop)
     {
-        popEval.push_back(evalFitnessCrom(ii));
+        float actualCost = evalCrom(ii);
+        if(actualCost > max)
+        {
+            max = actualCost;
+        }
+        if(actualCost < min)
+        {
+            min = actualCost;
+        }
+        popCost.push_back(actualCost);
+    }
+    for (auto ii : popCost)
+    {
+        popEval.push_back(evalFitnessCrom(ii, min, max));
     }
 }
 
@@ -156,7 +171,7 @@ int bestCrom()
     return pos;
 }
 // Mutatia
-void mutate()
+void mutate2()
 {
     //printf("\nMUTATE:");
     float p;
@@ -181,8 +196,54 @@ void mutate()
     }
 }
 
+
+void Permute(vector<int>& crom, int nrLocus, int newNrLocus)
+{
+    int aux = crom[nrLocus];
+    crom[nrLocus] = crom[newNrLocus];
+    crom[newNrLocus] = aux;
+}
+void mutate1()
+{
+    int nrCrom = 0;
+    for (auto crom : pop)
+    {
+        vector<int> newCrom = cromReal(crom);
+        int nrLocus = 0;
+        for (auto locus : newCrom)
+        {
+            //char old = locus;
+           int p = ((float)rand() / (RAND_MAX));
+            if (p < mutateProb)
+            {
+                int j = rand() % nrVertex;
+                Permute(newCrom, nrLocus, j);
+            }
+
+            nrLocus++;
+        }
+        vector<int> leftVertex;
+        for(int i = 0; i < nrVertex; ++i)
+        {
+            leftVertex.push_back(i);
+        }
+        vector<int> transCrom;
+        for(auto ii : newCrom)
+        {
+            if(transCrom.size() < nrVertex - 1)
+            {
+                auto findPos = find(leftVertex.begin(), leftVertex.end(), ii); 
+                transCrom.push_back(distance(leftVertex.begin(), findPos));
+                leftVertex.erase(findPos);
+            }
+        }
+        pop[nrCrom] = transCrom;
+        nrCrom++;
+    }
+}
+
 //Crossover
-void Cross(int index1, int index2) {
+/*void Cross2(int index1, int index2) {
     //Declare the children
     std::vector<int> child1;
     std::vector<int> child2;
@@ -206,8 +267,127 @@ void Cross(int index1, int index2) {
     //Replace the parents with their children in the population
     pop.push_back(child1);
     pop.push_back(child2);
-}
+}*/
 
+void Cross(int index1, int index2) {
+    //Declare the children
+    std::vector<int> child;
+    child.reserve(nrVertex);
+
+    // declare aux data structure
+    bool isValid1, isValid2;
+    int nextVertex;
+
+    //create set of leftVertext
+    vector<int> leftVertex;
+    for(int i = 0; i < nrVertex; ++i)
+    {
+        leftVertex.push_back(i);
+    }
+
+
+    // obtain the real path
+    std::vector<int> parent1 = cromReal(pop[index1]);
+    std::vector<int> parent2 = cromReal(pop[index2]);
+
+    // obtain the start vertex with rand
+    int vertex = rand() % nrVertex;
+
+    child.push_back(vertex);
+    auto erasePos = find(leftVertex.begin(), leftVertex.end(), vertex);
+    leftVertex.erase(erasePos);
+
+
+    while(leftVertex.size() > 0)
+    {
+        // obtain nextVertex1
+        auto pos1 = find(parent1.begin(), parent1.end(), vertex);
+        pos1++;
+        if(pos1 == parent1.end())
+            pos1 = parent1.begin();
+        int nextVertex1 = *pos1;
+
+        //obtain nextVertex2
+        auto pos2 = find(parent2.begin(), parent2.end(), vertex);
+        pos2++;
+        if(pos2 == parent2.end())
+            pos2 = parent2.begin();
+        int nextVertex2 = *pos2;
+
+        // obtain the nextVertexes validity
+        isValid1 = true;
+        isValid2 = true;
+        for(auto ii : child)
+        {
+            if(ii == nextVertex1)
+            {
+                isValid1 = false;
+            }
+            if(ii == nextVertex2)
+            {
+                isValid2 = false;
+            }
+        }
+
+        // obtain nextVertex
+        if(isValid1)
+        {
+            if(isValid2)
+            {
+                if(distanceMatrix[vertex][nextVertex1] <= distanceMatrix[vertex][nextVertex2])
+                {
+                    nextVertex = nextVertex1;
+                }
+                else
+                {
+                    nextVertex = nextVertex2;
+                }
+            }
+            else
+            {
+                nextVertex = nextVertex1;
+            }
+        }
+        else
+        {
+            if(isValid2)
+            {
+                nextVertex = nextVertex2;
+            }
+            else
+            {
+                int randLeftVertex = rand()  % leftVertex.size();
+                nextVertex = leftVertex[randLeftVertex];
+            }
+        }
+        // add next vertex to child Path
+        child.push_back(nextVertex);
+        auto erasePos = find(leftVertex.begin(), leftVertex.end(), nextVertex);
+        leftVertex.erase(erasePos);
+
+
+        vertex = nextVertex;
+    }
+
+    // translate child path to representation
+    leftVertex.clear(); 
+    for(int i = 0; i < nrVertex; ++i)
+    {
+        leftVertex.push_back(i);
+    }
+    vector<int> newChild;
+    for(auto ii : child)
+    {
+        if(newChild.size() < nrVertex - 1)
+        {
+            auto findPos = find(leftVertex.begin(), leftVertex.end(), ii); 
+            newChild.push_back(distance(leftVertex.begin(), findPos));
+            leftVertex.erase(findPos);
+        }
+    }
+    //Add children in the population
+    pop.push_back(newChild);
+}
 
 void crossOver() {
     std::vector<std::pair<float, int>> crossList;
@@ -225,7 +405,8 @@ void crossOver() {
     int j = 0;
     while (crossList[j].first < crossProb) {
         if (crossList[j + 1].first >= crossProb) break;
-        else {
+        else 
+        {
             Cross(crossList[j].second, crossList[j + 1].second);
         }
         j = j + 2; //Next pair
@@ -259,17 +440,30 @@ void select() {
       
     //Selection procedure
     double ran;
-    for (int ii = 0; ii < popSize; ++ii) {
+    for (int ii = 0; ii < popSize; ++ii) 
+    {
         //Generate a random number between 0 and 1
         ran = (double(std::rand()) / double(RAND_MAX));
 
-        for (int jj = 0; jj < pop.size() - 1; ++jj) {
+        for (int jj = 0; jj < pop.size() - 1; ++jj) 
+        {
 
             //The jj chromosome corresponds to the random sector in roata norocului
-            if (ran >= cumulatedSelectionProbability[jj] && ran <= cumulatedSelectionProbability[jj + 1]) {
+            if (ran >= cumulatedSelectionProbability[jj] && ran <= cumulatedSelectionProbability[jj + 1]) 
+            {
                 //Push the jj chromosome in our population
+               /* if(evalCrom(pop[ii]) >= evalCrom(pop[jj]))
+                {
+                    newPop.push_back(pop[jj]);
+                    
+                }
+                else
+                {
+                    newPop.push_back(pop[ii]);
+                }
+                break; //Go to next ii  */
                 newPop.push_back(pop[jj]);
-                break; //Go to next ii
+                break;  
             }
         }
     }
@@ -283,7 +477,16 @@ void printRealCrom(vector<int> crom)
     vector<int> real = cromReal(crom);
     for (auto ii : real)
     {
-        printf("%d", ii);
+        printf("%d ", ii);
+    }
+}
+
+void printRealPop()
+{
+    for(auto ii : pop)
+    {
+        printRealCrom(ii);
+        printf("\n");
     }
 }
 void printCrom(vector<int> crom)
@@ -317,13 +520,14 @@ void algGenetic(int nrGeneratii)
 	int t = 0;
 	// Generam populatia initiala aleator
 	popInit();
-    printf("\nInitial Population\n");
-    printPop();
+    //printf("\nInitial Population\n");
+    //printPop();
+
 
    // evaluam populatia initiala (avem nevoie pentru elitism)
-    printf("\nEval:\n");
+   // printf("\nEval:\n");
 	eval();
-    printEval();
+  //  printEval();
 
 	// Elitism (alegem cei mai buni 2 cromozomi)
 	vector<int> positionBest = bestThreeCrom();
@@ -334,7 +538,16 @@ void algGenetic(int nrGeneratii)
     while (t < nrGeneratii)
     {
         // aplicam mutatia peste populatie
-        mutate();
+        int mutateVar = rand() % 2;
+        if(mutateVar)
+        {
+            mutate1();
+        }
+        else
+        {
+            mutate2();
+        }
+        
 
         // adaugam in populatie pe cei doi indivizi buni (Elitism)
         pop.push_back(bestThree[0]);
@@ -358,20 +571,53 @@ void algGenetic(int nrGeneratii)
 
         eval();
         int posBest = bestCrom();
+        float evalBest = evalCrom(pop[posBest]);
+        if(t == 1)
+        {
+            oldBestEval = evalBest;
+        }
+        else
+        {
+            if(oldBestEval == evalBest)
+            {
+                blockCounter++;
+            }
+            else
+            {
+                blockCounter = 0;
+                oldBestEval = evalBest;
+            }
 
-        printf("\nGeneratia %d\n", t);
-        //printRealCrom(pop[posBest]);
+            if(blockCounter == 0)
+            {
+                mutateProb = defaultMutateProb;
+            }
+            else
+            {
+                if(blockCounter % 5 == 0 && mutateProb < 0.75)
+                {
+                    mutateProb *= 1.2;
+                }   
+            }
+        }
+
+
+
+
+        /*printf("\nGeneratia %d\n", t);
         printf("\nResult = %f", evalCrom(pop[posBest]));
-
+        printf("\nMutateProb = %f", mutateProb);
+*/
     }
 
     // Gasirea celui mai bun individ din ultima generatie.
 	eval();
     int posBest = bestCrom();
-
-    printf("\n");
-    printRealCrom(pop[posBest]);
-   printf("\nResult = %f", evalCrom(pop[posBest]));
+    //printf("\n");
+   // printRealCrom(pop[posBest]);
+    float evalResult = evalCrom(pop[posBest]);
+   //printf("\nResult = %f", evalResult);
+   outfile << evalResult;
   
 
 	//printf("\n##################   FINAL    #######\n");
@@ -392,7 +638,7 @@ int main(int argc, char* argv[])
     {
         srand(time(NULL)); 
         unitPermInit();
-        printf("Name of testFile: %s\n", argv[1]);
+        //printf("Name of testFile: %s\n", argv[1]);
         ifstream infile;
         infile.open(argv[1]);
         int nr;
@@ -401,19 +647,28 @@ int main(int argc, char* argv[])
             for(int j = 0; j < nrVertex; j++)
             {
                 infile >> nr;
-                printf("%d\n", nr);
+                //printf("%d\n", nr);
                 distanceMatrix[i][j] = nr;
             }       
         }
-        for(int i = 0; i < nrVertex; i++)
+        /*for(int i = 0; i < nrVertex; i++)
         {
             for(int j = 0; j < nrVertex; j++)
             {
                 printf("%d ", distanceMatrix[i][j]);
             }
             printf("\n");
-        }
-        algGenetic(1000);
+        }*/
+       
+       for(int i = 0; i < 2; i++)
+       {
+            auto start = std::chrono::high_resolution_clock::now(); 
+            algGenetic(5000);
+            auto stop = std::chrono::high_resolution_clock::now(); 
+            auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start); 
+            outfile << '/' << duration.count() << endl;
+       }
+
 
         infile.close();
     }
